@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>Audio Clipper</title>
+</head>
+<body>
+  <h1>Audio Clipper</h1>
+  <!-- File Upload Form -->
+  <form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" name="file" accept="audio/*,video/*" required>
+    <button type="submit">Upload and Convert</button>
+  </form>
+
+  <!-- Audio Player and Clipping Functionality -->
+  <div id="playerContainer" style="display: none;">
+    <h2>Converted Audio:</h2>
+    <audio id="audioPlayer" controls></audio>
+
+    <!-- Clip feature -->
+    <div>
+          <label for="startTime">Start Time (microseconds):</label>
+          <input type="number" id="startTime" value="0" step="1">
+          <label for="endTime">End Time (microseconds):</label>
+          <input type="number" id="endTime" value="0" step="1">
+          <button id="clipButton">Clip and Download</button>
+    </div>
+  </div>
+
+  <script>
+    const uploadForm = document.getElementById('uploadForm');
+    const playerContainer = document.getElementById('playerContainer');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const clipButton = document.getElementById('clipButton');
+
+    let currentFileName = '';
+
+    // Handle file upload and conversion
+    uploadForm.addEventListener('submit', function(event) {
+      event.preventDefault();
+      const formData = new FormData(uploadForm);
+
+      fetch('/upload', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        currentFileName = data.filename;
+        audioPlayer.src = '/audios/' + currentFileName;
+        playerContainer.style.display = 'block';
+      })
+      .catch(err => {
+        alert('File upload or conversion failed');
+        console.error(err);
+      });
+    });
+
+        // Handle audio clipping
+        clipButton.addEventListener('click', function() {
+          const startTime = parseInt(document.getElementById('startTime').value, 10);
+          const endTime = parseInt(document.getElementById('endTime').value, 10);
+
+      fetch('/clip', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          filename: currentFileName,
+          startTime: startTime,
+          endTime: endTime
+        })
+      })
+      .then(response => response.blob())
+      .then(blob => {
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'clipped.mp3';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      })
+      .catch(err => {
+        alert('Audio clipping failed');
+        console.error(err);
+      });
+    });
+  </script>
+</body>
+</html>
